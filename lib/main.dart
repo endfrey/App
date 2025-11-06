@@ -13,7 +13,6 @@ import 'package:wstore/page/login.dart';
 import 'package:wstore/page/product_detail.dart';
 import 'package:wstore/page/profile.dart';
 import 'package:wstore/page/signup.dart';
-
 import 'package:wstore/services/constant.dart';
 import 'package:wstore/services/store_setup.dart';
 
@@ -36,9 +35,47 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'WStore',
-      theme: ThemeData(primarySwatch: Colors.green),
 
-      // ✅ เข้าหน้าโฮมปกติ (มี BottomNav และ Chat อยู่แล้ว)
+      // ✅ ดาร์กโหมดอัตโนมัติ
+      themeMode: ThemeMode.system,
+
+      // 🌞 โหมดสว่าง
+      theme: ThemeData(
+        brightness: Brightness.light,
+        primarySwatch: Colors.green,
+        scaffoldBackgroundColor: Colors.grey[100],
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+        ),
+        cardTheme: const CardThemeData(
+          color: Colors.white,
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+        ),
+      ),
+
+      // 🌚 โหมดมืด
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        primarySwatch: Colors.green,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1E1E1E),
+          foregroundColor: Colors.white,
+        ),
+        cardTheme: const CardThemeData(
+          color: Color(0xFF1E1E1E),
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+        ),
+      ),
+
+      // ✅ หน้าเริ่มต้น
       home: const LogIn(),
     );
   }

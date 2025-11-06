@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wstore/services/shared_pref.dart';
 import 'chat_room_page.dart';
 
 class ChatListPage extends StatelessWidget {
@@ -13,6 +14,8 @@ class ChatListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SharedPreferenceHelper sharedPref = SharedPreferenceHelper();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF0F9FF),
       appBar: AppBar(
@@ -48,64 +51,56 @@ class ChatListPage extends StatelessWidget {
               final data = docs[i].data() as Map<String, dynamic>;
               final chatId = docs[i].id;
 
-              // แสดงชื่อผู้ใช้จาก Firestore จริง
-              final username = data["username"] ?? data["userName"] ?? "ลูกค้า";
+              return FutureBuilder(
+                future: sharedPref.getUserName(),
+                builder: (context, AsyncSnapshot<String?> snapshot) {
+                  String fallbackName = snapshot.data ?? "ลูกค้า";
 
-              final userImage = data["userImage"];
-              final lastMessage = data["lastMessage"] ?? "";
+                  final username = data["username"] ?? data["userName"] ?? fallbackName;
+                  final lastMessage = data["lastMessage"] ?? "";
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 2,
-                child: ListTile(
-                  leading: CircleAvatar(
-                    radius: 26,
-                    backgroundColor: Colors.grey.shade300,
-                    backgroundImage:
-                        userImage != null && userImage.toString().isNotEmpty
-                            ? NetworkImage(userImage)
-                            : null,
-                    child: userImage == null
-                        ? const Icon(Icons.person, color: Colors.white)
-                        : null,
-                  ),
-                  title: Text(
-                    username, // ✅ แสดง username จริง ๆ
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: Color(0xFF0C4A6E),
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                  ),
-                  subtitle: Text(
-                    lastMessage,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-                  onTap: () async {
-                    // เข้าไปในห้องแชท
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatRoomPage(
-                          chatId: chatId,
-                          currentUserId: "admin",
+                    elevation: 2,
+                    child: ListTile(
+                      // เอา leading ออก
+                      title: Text(
+                        username,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: Color(0xFF0C4A6E),
                         ),
                       ),
-                    );
+                      subtitle: Text(
+                        lastMessage,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatRoomPage(
+                              chatId: chatId,
+                              currentUserId: "admin",
+                            ),
+                          ),
+                        );
 
-                    // เมื่อกลับมาจากห้องแชท ให้ลบค่า unread
-                    await _markAsRead(chatId);
-                  },
-                ),
+                        await _markAsRead(chatId);
+                      },
+                    ),
+                  );
+                },
               );
             },
           );

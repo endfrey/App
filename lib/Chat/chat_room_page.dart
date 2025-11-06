@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/chat_service.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 
 class ChatRoomPage extends StatefulWidget {
   final String chatId;
@@ -22,13 +20,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   final TextEditingController _controller = TextEditingController();
   final ChatService _chatService = ChatService();
 
-  File? _selectedImage;
   bool _sending = false;
 
   String chatTitle = "ห้องแชท";
-  String? chatImage;
 
   @override
+  
   void initState() {
     super.initState();
     _loadChatHeader();
@@ -54,46 +51,35 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       if (widget.currentUserId == "admin") {
         setState(() {
           chatTitle = chatDoc["userName"] ?? "ลูกค้า";
-          chatImage = chatDoc["userImage"];
         });
       } else {
         setState(() {
           chatTitle = chatDoc["storeName"] ?? "ร้านค้า";
-          chatImage = chatDoc["storeImage"];
         });
       }
     }
   }
 
   Future<void> _sendMessage() async {
-    if (_controller.text.trim().isEmpty && _selectedImage == null) return;
+    if (_controller.text.trim().isEmpty) return;
 
     setState(() => _sending = true);
-
-    String? imageUrl;
-    if (_selectedImage != null) {
-      imageUrl = await _chatService.uploadImage(_selectedImage!, widget.chatId);
-    }
 
     await _chatService.sendMessage(
       chatId: widget.chatId,
       senderId: widget.currentUserId,
-      text: _controller.text.trim().isEmpty ? null : _controller.text.trim(),
-      imageUrl: imageUrl,
+      text: _controller.text.trim(),
+      imageUrl: null,
     );
 
     setState(() {
       _controller.clear();
-      _selectedImage = null;
       _sending = false;
     });
   }
 
-  // ✅ Bubble ดีไซน์ใหม่
   Widget _buildBubble(Map<String, dynamic> msg, bool isMe) {
-    bool hasImage = msg["imageUrl"] != null && msg["imageUrl"] != "";
     String text = msg["text"] ?? "";
-
     Timestamp? ts = msg["timestamp"];
     String timeStr = ts != null
         ? TimeOfDay.fromDateTime(ts.toDate()).format(context)
@@ -139,25 +125,15 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               crossAxisAlignment:
                   isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                if (hasImage)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(msg["imageUrl"], width: 180),
-                  ),
-
                 if (text.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      text,
-                      style: TextStyle(
-                        color: isMe ? Colors.white : Colors.black87,
-                        fontSize: 15,
-                        height: 1.3,
-                      ),
+                  Text(
+                    text,
+                    style: TextStyle(
+                      color: isMe ? Colors.white : Colors.black87,
+                      fontSize: 15,
+                      height: 1.3,
                     ),
                   ),
-
                 if (timeStr.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -197,8 +173,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         return ListView.builder(
           reverse: true,
           padding: const EdgeInsets.only(top: 10, bottom: 10),
-          itemCount: msgs.length,
           physics: const BouncingScrollPhysics(),
+          itemCount: msgs.length,
           itemBuilder: (context, i) {
             final msg = msgs[i].data() as Map<String, dynamic>;
             bool isMe = msg["senderId"] == widget.currentUserId;
@@ -209,35 +185,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     );
   }
 
-  Widget _buildImagePreview() {
-    if (_selectedImage == null) return const SizedBox();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Image.file(_selectedImage!, height: 120),
-          ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: CircleAvatar(
-              radius: 14,
-              backgroundColor: Colors.white,
-              child: IconButton(
-                icon: const Icon(Icons.close, size: 16, color: Colors.red),
-                onPressed: () => setState(() => _selectedImage = null),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ✅ Input bar ใหม่แบบ modern (ลอย)
   Widget _buildInputBox() {
     return SafeArea(
       child: Container(
@@ -267,19 +214,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           ),
           child: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.photo, color: Color(0xFF0EA5E9)),
-                onPressed: () async {
-                  final picked = await ImagePicker().pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 70,
-                  );
-                  if (picked != null) {
-                    setState(() => _selectedImage = File(picked.path));
-                  }
-                },
-              ),
-
               Expanded(
                 child: TextField(
                   controller: _controller,
@@ -289,7 +223,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                   ),
                 ),
               ),
-
               _sending
                   ? const SizedBox(
                       height: 20,
@@ -318,51 +251,17 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0EA5E9),
         elevation: 3,
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: CircleAvatar(
-                radius: 19,
-                backgroundColor: Colors.white,
-                backgroundImage:
-                    chatImage != null ? NetworkImage(chatImage!) : null,
-                child: chatImage == null
-                    ? Icon(
-                        widget.currentUserId == "admin"
-                            ? Icons.person
-                            : Icons.store,
-                        color: Colors.teal,
-                      )
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              chatTitle,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        title: Text(
+          chatTitle,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: Column(
         children: [
           Expanded(child: _buildMessages()),
-          _buildImagePreview(),
           _buildInputBox(),
         ],
       ),

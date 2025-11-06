@@ -87,13 +87,7 @@ class _AdminStockPageState extends State<AdminStockPage> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.add, color: Colors.white),
-            tooltip: "เพิ่มสินค้าใหม่",
-          ),
-        ],
+        
       ),
 
       body: SafeArea(

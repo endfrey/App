@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:wstore/page/Order.dart';
 import 'package:wstore/page/homepage.dart';
 import 'package:wstore/page/profile.dart';
-import 'package:wstore/Chat/chat_room_page.dart';
 import 'package:wstore/services/shared_pref.dart';
-import 'package:wstore/Chat/services/chat_service.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});
@@ -16,7 +14,6 @@ class BottomNav extends StatefulWidget {
 
 class _BottomNavState extends State<BottomNav> {
   int _currentIndex = 0;
-  final ChatService _chatService = ChatService();
   late List<Widget> _pages;
   String? userId;
 
@@ -29,56 +26,13 @@ class _BottomNavState extends State<BottomNav> {
   Future<void> _loadUser() async {
     userId = await SharedPreferenceHelper().getUserID();
 
-    _pages = const [
-      Home(),
-      Order(),
-      SizedBox.shrink(), // index 2 สำหรับแชท
-      Profile(),
+    _pages = [
+      const Home(),
+      const Order(),
+      const Profile(),
     ];
 
     if (mounted) setState(() {});
-  }
-
-  /// ✅ เปิดหน้าแชท (ไม่ค้าง animation)
-  Future<void> _openChat() async {
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("กรุณาเข้าสู่ระบบก่อนใช้งานแชท"),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    final chatId = userId!;
-    final oldIndex = _currentIndex;
-
-    // ✅ แสดง animation ก่อนเปิดแชท
-    setState(() {
-      _currentIndex = 2;
-    });
-
-    // ✅ สร้างห้องแชทถ้ายังไม่มี
-    await _chatService.createChatRoomForUser(chatId);
-
-    // ✅ เปิดหน้าแชท
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatRoomPage(
-          chatId: chatId,
-          currentUserId: chatId,
-        ),
-      ),
-    );
-
-    // ✅ กลับมาแท็บเดิมหลังปิดแชท
-    if (mounted) {
-      setState(() {
-        _currentIndex = oldIndex;
-      });
-    }
   }
 
   @override
@@ -118,33 +72,30 @@ class _BottomNavState extends State<BottomNav> {
           buttonBackgroundColor: Colors.white,
           animationDuration: const Duration(milliseconds: 350),
           index: _currentIndex,
-          onTap: (index) async {
-            if (index == 2) {
-              await _openChat();
-              return;
-            }
-
+          onTap: (index) {
             setState(() {
               _currentIndex = index;
             });
           },
           items: [
             Icon(Icons.home_outlined,
-                color: _currentIndex == 0 ? const Color(0xFF0EA5E9) : Colors.white,
+                color: _currentIndex == 0
+                    ? const Color(0xFF0EA5E9)
+                    : Colors.white,
                 size: 30),
             Icon(Icons.shopping_cart_outlined,
-                color: _currentIndex == 1 ? const Color(0xFF0EA5E9) : Colors.white,
-                size: 30),
-            Icon(Icons.chat_bubble_outline,
-                color: _currentIndex == 2 ? const Color(0xFF0EA5E9) : Colors.white,
+                color: _currentIndex == 1
+                    ? const Color(0xFF0EA5E9)
+                    : Colors.white,
                 size: 30),
             Icon(Icons.person_outline,
-                color: _currentIndex == 3 ? const Color(0xFF0EA5E9) : Colors.white,
+                color: _currentIndex == 2
+                    ? const Color(0xFF0EA5E9)
+                    : Colors.white,
                 size: 30),
           ],
         ),
       ),
-
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 400),
         switchInCurve: Curves.easeInOutCubic,

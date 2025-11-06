@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:wstore/Chat/chat_room_page.dart';
 import 'package:wstore/page/cart_page.dart';
 import 'package:wstore/page/category_product.dart';
 import 'package:wstore/page/product_detail.dart';
@@ -21,6 +22,7 @@ class _HomeState extends State<Home> {
 
   String? userName;
   String? userImage;
+  String? userId; // ✅ เพิ่ม userId สำหรับใช้เปิดห้องแชท
 
   @override
   void initState() {
@@ -37,9 +39,11 @@ class _HomeState extends State<Home> {
   Future<void> _loadUser() async {
     userName = await SharedPreferenceHelper().getUserName();
     userImage = await SharedPreferenceHelper().getUserImage();
+    userId = await SharedPreferenceHelper().getUserID(); // ✅ ดึง userId จาก SharedPref
     if (mounted) setState(() {});
   }
 
+  // 🔹 Header (เพิ่มปุ่มแชทไว้ข้างปุ่มตะกร้า)
   Widget _header() {
     return Row(
       children: [
@@ -63,6 +67,49 @@ class _HomeState extends State<Home> {
             ],
           ),
         ),
+
+        // 🔹 ปุ่มแชท (แก้ให้ส่ง chatId + currentUserId)
+        GestureDetector(
+          onTap: () {
+            if (userId == null || userId!.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("ไม่พบข้อมูลผู้ใช้")),
+              );
+              return;
+            }
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ChatRoomPage(
+                  chatId: userId!, // ✅ ใช้ userId เป็น chatId
+                  currentUserId: userId!, // ✅ ส่ง currentUserId ด้วย
+                ),
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.shade100.withOpacity(0.5),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.chat_bubble_outline,
+              color: Color(0xFF0284C7),
+              size: 26,
+            ),
+          ),
+        ),
+
+        // 🔹 ปุ่มตะกร้า
         GestureDetector(
           onTap: () => Navigator.push(
             context,
@@ -88,6 +135,8 @@ class _HomeState extends State<Home> {
             ),
           ),
         ),
+
+        // 🔹 รูปโปรไฟล์
         ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: (userImage != null && userImage!.isNotEmpty)
@@ -107,6 +156,7 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // 🔹 หมวดหมู่
   Widget buildCategoryList() {
     final categories = [
       {"img": "assets/images/headphone_icon.png", "name": "Headphone"},
@@ -167,6 +217,7 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // 🔹 การ์ดสินค้า
   Widget buildProductCard(Map<String, dynamic> product) {
     final List<String> images =
         (product['images'] != null && product['images'] is List)
@@ -214,7 +265,8 @@ class _HomeState extends State<Home> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
               child: firstImg.startsWith("http")
                   ? Image.network(firstImg,
                       height: 120, width: double.infinity, fit: BoxFit.cover)
@@ -252,6 +304,7 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // 🔹 หน้า Home หลัก
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -277,30 +330,35 @@ class _HomeState extends State<Home> {
             final filteredProducts = searchText.isEmpty
                 ? products
                 : products.where((p) {
-                    final name =
-                        (p["UpdatedName"] ?? p["Name"] ?? "").toString().toLowerCase();
-                    final detail = (p["Detail"] ?? "").toString().toLowerCase();
-                    return name.contains(searchText) || detail.contains(searchText);
+                    final name = (p["UpdatedName"] ?? p["Name"] ?? "")
+                        .toString()
+                        .toLowerCase();
+                    final detail =
+                        (p["Detail"] ?? "").toString().toLowerCase();
+                    return name.contains(searchText) ||
+                        detail.contains(searchText);
                   }).toList();
 
             final best = List<Map<String, dynamic>>.from(filteredProducts)
-              ..sort((a, b) => (b["salesCount"] ?? 0).compareTo(a["salesCount"] ?? 0));
+              ..sort((a, b) =>
+                  (b["salesCount"] ?? 0).compareTo(a["salesCount"] ?? 0));
 
             final newest = List<Map<String, dynamic>>.from(filteredProducts)
-              ..sort((a, b) =>
-                  ((b["createdAt"] ?? Timestamp.now()) as Timestamp)
-                      .compareTo(a["createdAt"] ?? Timestamp.now()));
+              ..sort((a, b) => ((b["createdAt"] ?? Timestamp.now()) as Timestamp)
+                  .compareTo(a["createdAt"] ?? Timestamp.now()));
 
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _header(),
                   const SizedBox(height: 20),
-                  // Search Bar
+                  // 🔹 Search Bar
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
@@ -314,15 +372,18 @@ class _HomeState extends State<Home> {
                     ),
                     child: TextField(
                       controller: searchController,
-                      onChanged: (v) => setState(() => searchText = v.toLowerCase()),
+                      onChanged: (v) =>
+                          setState(() => searchText = v.toLowerCase()),
                       decoration: InputDecoration(
                         hintText: "Search product...",
                         border: InputBorder.none,
-                        icon: const Icon(Icons.search, color: Color(0xFF38BDF8)),
+                        icon: const Icon(Icons.search,
+                            color: Color(0xFF38BDF8)),
                         suffixIcon: searchText.isEmpty
                             ? null
                             : IconButton(
-                                icon: const Icon(Icons.close, color: Color(0xFF38BDF8)),
+                                icon: const Icon(Icons.close,
+                                    color: Color(0xFF38BDF8)),
                                 onPressed: () {
                                   searchController.clear();
                                   setState(() => searchText = "");
@@ -378,15 +439,18 @@ class _HomeState extends State<Home> {
                   const SizedBox(height: 16),
                   GridView.builder(
                     shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
+                    physics:
+                        const NeverScrollableScrollPhysics(),
                     itemCount: filteredProducts.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       childAspectRatio: 0.68,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
-                    itemBuilder: (_, i) => buildProductCard(filteredProducts[i]),
+                    itemBuilder: (_, i) =>
+                        buildProductCard(filteredProducts[i]),
                   ),
                   const SizedBox(height: 30),
                 ],
